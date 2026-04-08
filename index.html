@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>POLYGLOT — Code Converter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #080c0f;
+    --surface: #0d1318;
+    --surface2: #111820;
+    --border: #1e2d3d;
+    --border-glow: #2a4a6b;
+    --accent: #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #39ff7a;
+    --text: #c9d8e8;
+    --text-dim: #4a6278;
+    --text-muted: #2a3d52;
+    --font-mono: 'JetBrains Mono', monospace;
+    --font-display: 'Syne', sans-serif;
+  }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+height: 100%;
+background: var(–bg);
+color: var(–text);
+font-family: var(–font-mono);
+overflow: hidden;
+}
+
+/* Animated background grid */
+body::before {
+content: ‘’;
+position: fixed;
+inset: 0;
+background-image:
+linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+background-size: 48px 48px;
+animation: gridDrift 20s linear infinite;
+pointer-events: none;
+z-index: 0;
+}
+
+body::after {
+content: ‘’;
+position: fixed;
+inset: 0;
+background: radial-gradient(ellipse 60% 50% at 50% 0%, rgba(0,80,120,0.18) 0%, transparent 70%);
+pointer-events: none;
+z-index: 0;
+}
+
+@keyframes gridDrift {
+0% { background-position: 0 0, 0 0; }
+100% { background-position: 48px 48px, 48px 48px; }
+}
+
+.app {
+position: relative;
+z-index: 1;
+display: flex;
+flex-direction: column;
+height: 100vh;
+padding: 0;
+}
+
+/* Header */
+header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 16px 32px;
+border-bottom: 1px solid var(–border);
+background: rgba(8,12,15,0.8);
+backdrop-filter: blur(12px);
+flex-shrink: 0;
+}
+
+.logo {
+display: flex;
+align-items: baseline;
+gap: 12px;
+}
+
+.logo-text {
+font-family: var(–font-display);
+font-size: 22px;
+font-weight: 800;
+letter-spacing: 0.15em;
+background: linear-gradient(90deg, var(–accent), #0088ff);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+}
+
+.logo-sub {
+font-size: 10px;
+letter-spacing: 0.2em;
+color: var(–text-dim);
+text-transform: uppercase;
+}
+
+.header-status {
+display: flex;
+align-items: center;
+gap: 8px;
+font-size: 11px;
+color: var(–text-dim);
+letter-spacing: 0.1em;
+}
+
+.status-dot {
+width: 6px;
+height: 6px;
+border-radius: 50%;
+background: var(–accent3);
+box-shadow: 0 0 8px var(–accent3);
+animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+0%, 100% { opacity: 1; box-shadow: 0 0 8px var(–accent3); }
+50% { opacity: 0.4; box-shadow: 0 0 2px var(–accent3); }
+}
+
+/* Main layout */
+.workspace {
+display: grid;
+grid-template-columns: 1fr 64px 1fr;
+flex: 1;
+overflow: hidden;
+gap: 0;
+}
+
+/* Panels */
+.panel {
+display: flex;
+flex-direction: column;
+overflow: hidden;
+background: var(–surface);
+}
+
+.panel-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 12px 20px;
+border-bottom: 1px solid var(–border);
+background: var(–surface2);
+flex-shrink: 0;
+gap: 12px;
+}
+
+.panel-label {
+font-size: 9px;
+letter-spacing: 0.25em;
+text-transform: uppercase;
+color: var(–text-dim);
+white-space: nowrap;
+}
+
+.lang-select-wrap {
+position: relative;
+flex: 1;
+max-width: 220px;
+}
+
+.lang-select-wrap::after {
+content: ‘▾’;
+position: absolute;
+right: 10px;
+top: 50%;
+transform: translateY(-50%);
+color: var(–accent);
+pointer-events: none;
+font-size: 12px;
+}
+
+select {
+width: 100%;
+appearance: none;
+background: var(–bg);
+border: 1px solid var(–border);
+color: var(–text);
+font-family: var(–font-mono);
+font-size: 12px;
+padding: 7px 28px 7px 12px;
+border-radius: 4px;
+cursor: pointer;
+letter-spacing: 0.05em;
+transition: border-color 0.2s, box-shadow 0.2s;
+outline: none;
+}
+
+select:hover, select:focus {
+border-color: var(–accent);
+box-shadow: 0 0 0 1px rgba(0,212,255,0.2);
+}
+
+select option { background: #0d1318; }
+
+.panel-actions {
+display: flex;
+gap: 8px;
+}
+
+.icon-btn {
+background: transparent;
+border: 1px solid var(–border);
+color: var(–text-dim);
+cursor: pointer;
+padding: 6px 10px;
+border-radius: 4px;
+font-size: 11px;
+font-family: var(–font-mono);
+letter-spacing: 0.05em;
+transition: all 0.2s;
+white-space: nowrap;
+}
+
+.icon-btn:hover {
+border-color: var(–accent);
+color: var(–accent);
+background: rgba(0,212,255,0.05);
+}
+
+.icon-btn.success {
+border-color: var(–accent3);
+color: var(–accent3);
+background: rgba(57,255,122,0.05);
+}
+
+textarea, .output-code {
+flex: 1;
+font-family: var(–font-mono);
+font-size: 13px;
+line-height: 1.7;
+padding: 20px 24px;
+background: var(–surface);
+color: var(–text);
+border: none;
+outline: none;
+resize: none;
+overflow-y: auto;
+tab-size: 2;
+letter-spacing: 0.02em;
+}
+
+textarea::placeholder {
+color: var(–text-muted);
+font-style: italic;
+}
+
+.output-code {
+white-space: pre-wrap;
+word-break: break-all;
+}
+
+.output-code.loading {
+display: flex;
+align-items: center;
+justify-content: center;
+flex-direction: column;
+gap: 20px;
+color: var(–text-dim);
+}
+
+/* Spinner */
+.spinner {
+width: 36px;
+height: 36px;
+border: 2px solid var(–border);
+border-top-color: var(–accent);
+border-radius: 50%;
+animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-text {
+font-size: 11px;
+letter-spacing: 0.2em;
+text-transform: uppercase;
+animation: blink 1.2s ease-in-out infinite;
+}
+
+@keyframes blink {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.3; }
+}
+
+/* Center column — convert button */
+.center-col {
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+border-left: 1px solid var(–border);
+border-right: 1px solid var(–border);
+background: var(–bg);
+gap: 20px;
+position: relative;
+flex-shrink: 0;
+}
+
+.center-col::before {
+content: ‘’;
+position: absolute;
+top: 0; bottom: 0;
+left: 50%;
+width: 1px;
+background: linear-gradient(to bottom, transparent, var(–border-glow), transparent);
+transform: translateX(-50%);
+}
+
+.convert-btn {
+position: relative;
+width: 44px;
+height: 44px;
+border-radius: 50%;
+border: 1.5px solid var(–accent);
+background: rgba(0,212,255,0.05);
+color: var(–accent);
+cursor: pointer;
+font-size: 18px;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: all 0.3s;
+box-shadow: 0 0 20px rgba(0,212,255,0.1);
+outline: none;
+}
+
+.convert-btn:hover:not(:disabled) {
+background: rgba(0,212,255,0.15);
+box-shadow: 0 0 30px rgba(0,212,255,0.3), 0 0 60px rgba(0,212,255,0.1);
+transform: scale(1.1);
+}
+
+.convert-btn:active:not(:disabled) {
+transform: scale(0.95);
+}
+
+.convert-btn:disabled {
+opacity: 0.3;
+cursor: not-allowed;
+}
+
+.convert-btn.running {
+animation: btnPulse 1s ease-in-out infinite;
+border-color: var(–accent2);
+color: var(–accent2);
+box-shadow: 0 0 30px rgba(255,107,53,0.3);
+}
+
+@keyframes btnPulse {
+0%, 100% { box-shadow: 0 0 20px rgba(255,107,53,0.2); }
+50% { box-shadow: 0 0 40px rgba(255,107,53,0.5); }
+}
+
+.swap-btn {
+width: 32px;
+height: 32px;
+border-radius: 50%;
+border: 1px solid var(–border);
+background: transparent;
+color: var(–text-dim);
+cursor: pointer;
+font-size: 14px;
+display: flex;
+align-items: center;
+justify-content: center;
+transition: all 0.2s;
+outline: none;
+}
+
+.swap-btn:hover {
+border-color: var(–accent2);
+color: var(–accent2);
+transform: rotate(180deg);
+}
+
+/* Footer / status bar */
+footer {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 8px 32px;
+border-top: 1px solid var(–border);
+background: var(–surface2);
+font-size: 10px;
+color: var(–text-dim);
+letter-spacing: 0.1em;
+flex-shrink: 0;
+}
+
+.footer-left {
+display: flex;
+gap: 24px;
+}
+
+.stat { color: var(–text-muted); }
+.stat span { color: var(–text-dim); }
+
+/* Error message */
+.error-msg {
+margin: 16px 24px;
+padding: 12px 16px;
+background: rgba(255,50,50,0.08);
+border: 1px solid rgba(255,50,50,0.25);
+border-radius: 4px;
+color: #ff6b6b;
+font-size: 12px;
+line-height: 1.5;
+display: none;
+}
+
+.error-msg.visible { display: block; }
+
+/* Line numbers effect on textarea */
+.code-wrap {
+flex: 1;
+display: flex;
+overflow: hidden;
+position: relative;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(–surface); }
+::-webkit-scrollbar-thumb { background: var(–border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(–border-glow); }
+
+/* Responsive */
+@media (max-width: 768px) {
+.workspace {
+grid-template-columns: 1fr;
+grid-template-rows: 1fr 48px 1fr;
+}
+.center-col {
+flex-direction: row;
+border-left: none;
+border-right: none;
+border-top: 1px solid var(–border);
+border-bottom: 1px solid var(–border);
+padding: 0 16px;
+}
+header { padding: 12px 16px; }
+footer { padding: 6px 16px; }
+}
+
+/* Highlight common keywords in output */
+.kw { color: #569cd6; }
+.str { color: #ce9178; }
+.cmt { color: #6a9955; font-style: italic; }
+.num { color: #b5cea8; }
+
+/* Tooltip */
+[data-tip] {
+position: relative;
+}
+[data-tip]:hover::after {
+content: attr(data-tip);
+position: absolute;
+bottom: calc(100% + 8px);
+left: 50%;
+transform: translateX(-50%);
+background: #1e2d3d;
+color: var(–text);
+font-size: 10px;
+padding: 4px 8px;
+border-radius: 3px;
+white-space: nowrap;
+border: 1px solid var(–border);
+letter-spacing: 0.05em;
+pointer-events: none;
+}
+</style>
+
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="logo">
+      <span class="logo-text">POLYGLOT</span>
+      <span class="logo-sub">Code Converter</span>
+    </div>
+    <div class="header-status">
+      <div class="status-dot"></div>
+      <span>CLAUDE API — ONLINE</span>
+    </div>
+  </header>
+
+  <div class="workspace">
+
+```
+<!-- Input Panel -->
+<div class="panel">
+  <div class="panel-header">
+    <span class="panel-label">INPUT</span>
+    <div class="lang-select-wrap">
+      <select id="srcLang">
+        <option value="auto">🔍 Auto Detect</option>
+        <option value="python">Python</option>
+        <option value="javascript">JavaScript</option>
+        <option value="typescript">TypeScript</option>
+        <option value="java">Java</option>
+        <option value="c#">C#</option>
+        <option value="c++">C++</option>
+        <option value="c">C</option>
+        <option value="go">Go</option>
+        <option value="rust">Rust</option>
+        <option value="ruby">Ruby</option>
+        <option value="php">PHP</option>
+        <option value="swift">Swift</option>
+        <option value="kotlin">Kotlin</option>
+        <option value="dart">Dart</option>
+        <option value="lua">Lua</option>
+        <option value="r">R</option>
+        <option value="bash">Bash / Shell</option>
+        <option value="powershell">PowerShell</option>
+        <option value="sql">SQL</option>
+        <option value="haskell">Haskell</option>
+        <option value="scala">Scala</option>
+        <option value="elixir">Elixir</option>
+        <option value="erlang">Erlang</option>
+        <option value="ocaml">OCaml</option>
+        <option value="perl">Perl</option>
+        <option value="groovy">Groovy</option>
+        <option value="clojure">Clojure</option>
+        <option value="zig">Zig</option>
+      </select>
+    </div>
+    <div class="panel-actions">
+      <button class="icon-btn" onclick="clearInput()" data-tip="Clear input">CLR</button>
+      <button class="icon-btn" onclick="pasteInput()" data-tip="Paste from clipboard">PST</button>
+    </div>
+  </div>
+  <div class="code-wrap">
+    <textarea
+      id="inputCode"
+      spellcheck="false"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="off"
+      placeholder="// Paste your code here...&#10;// Press ⟶ to convert"
+    ></textarea>
+  </div>
+</div>
+
+<!-- Center Column -->
+<div class="center-col">
+  <button class="swap-btn" onclick="swapLangs()" data-tip="Swap languages" title="Swap">⇄</button>
+  <button class="convert-btn" id="convertBtn" onclick="convert()" data-tip="Convert code" title="Convert">
+    <span id="btnIcon">⟶</span>
+  </button>
+</div>
+
+<!-- Output Panel -->
+<div class="panel">
+  <div class="panel-header">
+    <span class="panel-label">OUTPUT</span>
+    <div class="lang-select-wrap">
+      <select id="dstLang">
+        <option value="python">Python</option>
+        <option value="javascript">JavaScript</option>
+        <option value="typescript">TypeScript</option>
+        <option value="java">Java</option>
+        <option value="c#">C#</option>
+        <option value="c++">C++</option>
+        <option value="c">C</option>
+        <option value="go">Go</option>
+        <option value="rust">Rust</option>
+        <option value="ruby">Ruby</option>
+        <option value="php">PHP</option>
+        <option value="swift">Swift</option>
+        <option value="kotlin">Kotlin</option>
+        <option value="dart">Dart</option>
+        <option value="lua">Lua</option>
+        <option value="r">R</option>
+        <option value="bash">Bash / Shell</option>
+        <option value="powershell">PowerShell</option>
+        <option value="sql">SQL</option>
+        <option value="haskell">Haskell</option>
+        <option value="scala">Scala</option>
+        <option value="elixir">Elixir</option>
+        <option value="erlang">Erlang</option>
+        <option value="ocaml">OCaml</option>
+        <option value="perl">Perl</option>
+        <option value="groovy">Groovy</option>
+        <option value="clojure">Clojure</option>
+        <option value="zig">Zig</option>
+      </select>
+    </div>
+    <div class="panel-actions">
+      <button class="icon-btn" id="copyBtn" onclick="copyOutput()" data-tip="Copy output">CPY</button>
+      <button class="icon-btn" onclick="downloadOutput()" data-tip="Download file">DL</button>
+    </div>
+  </div>
+  <div class="error-msg" id="errorMsg"></div>
+  <div class="code-wrap">
+    <div class="output-code" id="outputCode">
+      <span style="color:var(--text-muted); font-style:italic; font-size:13px;">
+```
+
+// Output will appear here…
+</span>
+</div>
+</div>
+</div>
+
+  </div>
+
+  <footer>
+    <div class="footer-left">
+      <div class="stat">MODEL <span>claude-sonnet-4-20250514</span></div>
+      <div class="stat">TOKENS <span id="tokenCount">—</span></div>
+      <div class="stat">TIME <span id="elapsedTime">—</span></div>
+    </div>
+    <div class="stat">POLYGLOT v1.0 · Powered by Claude</div>
+  </footer>
+</div>
+
+<script>
+  // Set default dst lang to JavaScript
+  document.getElementById('dstLang').value = 'javascript';
+
+  async function convert() {
+    const code = document.getElementById('inputCode').value.trim();
+    if (!code) return;
+
+    const srcLang = document.getElementById('srcLang').value;
+    const dstLang = document.getElementById('dstLang').value;
+
+    const btn = document.getElementById('convertBtn');
+    const btnIcon = document.getElementById('btnIcon');
+    const output = document.getElementById('outputCode');
+    const errorMsg = document.getElementById('errorMsg');
+
+    btn.disabled = true;
+    btn.classList.add('running');
+    btnIcon.textContent = '⟳';
+    errorMsg.classList.remove('visible');
+
+    output.className = 'output-code loading';
+    output.innerHTML = '<div class="spinner"></div><div class="loading-text">Converting...</div>';
+
+    document.getElementById('tokenCount').textContent = '—';
+    document.getElementById('elapsedTime').textContent = '—';
+
+    const t0 = Date.now();
+
+    try {
+      const res = await fetch('/api/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, srcLang, dstLang })
+      });
+
+      const data = await res.json();
+      const elapsed = ((Date.now() - t0) / 1000).toFixed(2);
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+
+      output.className = 'output-code';
+      output.textContent = data.result;
+
+      if (data.usage) {
+        document.getElementById('tokenCount').textContent =
+          `${data.usage.input_tokens}↑ ${data.usage.output_tokens}↓`;
+      }
+      document.getElementById('elapsedTime').textContent = `${elapsed}s`;
+
+    } catch (err) {
+      output.className = 'output-code';
+      output.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">// Conversion failed.</span>';
+      errorMsg.textContent = '⚠ ' + err.message;
+      errorMsg.classList.add('visible');
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('running');
+      btnIcon.textContent = '⟶';
+    }
+  }
+
+  async function copyOutput() {
+    const text = document.getElementById('outputCode').textContent;
+    if (!text || text.includes('Output will appear') || text.includes('Conversion failed')) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓';
+      btn.classList.add('success');
+      setTimeout(() => { btn.textContent = 'CPY'; btn.classList.remove('success'); }, 1500);
+    } catch {}
+  }
+
+  function downloadOutput() {
+    const text = document.getElementById('outputCode').textContent;
+    const lang = document.getElementById('dstLang').value;
+    const extMap = {
+      python:'py', javascript:'js', typescript:'ts', java:'java',
+      'c#':'cs', 'c++':'cpp', c:'c', go:'go', rust:'rs',
+      ruby:'rb', php:'php', swift:'swift', kotlin:'kt', dart:'dart',
+      lua:'lua', r:'r', bash:'sh', powershell:'ps1', sql:'sql',
+      haskell:'hs', scala:'scala', elixir:'ex', erlang:'erl',
+      ocaml:'ml', perl:'pl', groovy:'groovy', clojure:'clj', zig:'zig'
+    };
+    const ext = extMap[lang] || 'txt';
+    const blob = new Blob([text], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `converted.${ext}`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function clearInput() {
+    document.getElementById('inputCode').value = '';
+    document.getElementById('inputCode').focus();
+  }
+
+  async function pasteInput() {
+    try {
+      const text = await navigator.clipboard.readText();
+      document.getElementById('inputCode').value = text;
+    } catch {}
+  }
+
+  function swapLangs() {
+    const src = document.getElementById('srcLang');
+    const dst = document.getElementById('dstLang');
+    const srcVal = src.value === 'auto' ? 'python' : src.value;
+    const dstVal = dst.value;
+
+    // Also swap code content
+    const inputCode = document.getElementById('inputCode');
+    const outputCode = document.getElementById('outputCode');
+    const outText = outputCode.textContent;
+
+    if (!outText.includes('Output will appear') && !outText.includes('Conversion failed')) {
+      inputCode.value = outText;
+      outputCode.className = 'output-code';
+      outputCode.innerHTML = '<span style="color:var(--text-muted); font-style:italic;">// Output will appear here...</span>';
+    }
+
+    src.value = dstVal;
+    dst.value = srcVal;
+  }
+
+  // Ctrl+Enter to convert
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      convert();
+    }
+  });
+</script>
+
+</body>
+</html>
